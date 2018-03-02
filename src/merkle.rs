@@ -4,16 +4,26 @@ use generic_array::typenum::U64;
 
 use tree;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Node {
-    index:  u64,
-    parent: u64,
-    length: u64,
-    data:   Option<Vec<u8>>,
-    hash:   GenericArray<u8, U64>,
+    pub index:  u64,
+    pub parent: u64,
+    pub length: u64,
+    pub data:   Option<Vec<u8>>,
+    pub hash:   GenericArray<u8, U64>,
 }
 
 impl Node {
+    pub fn with_hash(idx: u64, hash: &[u8], length: u64) -> Node {
+        Node {
+            index:      idx,
+            parent:     tree::parent(idx),
+            length:     length,
+            data:       None,
+            hash:       GenericArray::clone_from_slice(hash)
+        }
+    }
+
     pub fn with_data<D>(idx: u64, data: Vec<u8>) -> Node
                         where D: Digest<OutputSize=U64> {
         let mut hasher = D::new();
@@ -45,7 +55,7 @@ impl Node {
 #[derive(Debug)]
 pub struct Tree {
     pub roots:      Vec<Node>,
-    blocks:     u64,
+    pub blocks:     u64,
 }
 
 impl Tree {

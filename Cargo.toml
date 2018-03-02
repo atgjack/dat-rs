@@ -7,3 +7,4 @@ authors = ["atgJack <jack@atg.io>"]
 generic-array = "0.9.0"
 digest = "0.7.1"
 blake2 = "0.7"
+lru-cache = "0.1.1"

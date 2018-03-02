@@ -1,6 +1,11 @@
-use std::io::{Result, Error, ErrorKind, Write, Read};
+use std::io::{Result, Error, ErrorKind, Write, Read, Seek, SeekFrom};
 use std::fs::{File, OpenOptions};
 use std::path::{Path};
+
+use lru_cache::LruCache;
+
+use merkle::{Node};
+use tree;
 
 enum FileType { Tree, Signatures, Bitfield, Key, Data }
 
@@ -55,11 +60,12 @@ impl FileType {
 
 #[derive(Debug)]
 pub struct Storage {
+    cache:          LruCache<u64, Node>,
     tree:           File,
     signatures:     File,
     bitfield:       File,
-    key:       File,
-    data:       File,
+    key:            File,
+    data:           File,
 }
 
 impl Storage {
@@ -69,12 +75,79 @@ impl Storage {
         }
 
         Ok(Storage {
+            cache:          LruCache::new(65536),
             tree:           try!(open_or_create(path, FileType::Tree)),
             signatures:     try!(open_or_create(path, FileType::Signatures)),
             bitfield:       try!(open_or_create(path, FileType::Bitfield)),
             key:            try!(open_or_create(path, FileType::Key)),
             data:           try!(open_or_create(path, FileType::Data)),
         })
+    }
+
+    fn get_node(&mut self, index: u64) -> Result<Option<Node>> {
+        if let Some(node) = self.cache.get_mut(&index) {
+            return Ok(Some(node.clone()));
+        }
+
+        let mut buf = [0u8; 40];
+
+        try!(self.tree.seek(SeekFrom::Start(32 + 40 * index)));
+        try!(self.tree.read(&mut buf));
+        
+        let hash = &buf[..32];
+        let mut size: u64 = 0;
+        for i in 32..40 {
+            size <<= 8;
+            size += buf[i] as u64;
+        }
+
+        if size == 0 && hash_is_blank(&hash) {
+            return Ok(None);
+        }
+
+        let node = Node::with_hash(index, &hash, size);
+        self.cache.insert(index, node.clone());
+        Ok(Some(node))
+    }
+
+    fn get_offset(&mut self, index: u64) -> Result<Option<(u64, u64)>> {
+        let block = index * 2;
+        let roots = tree::full_roots(block);
+        let mut offset = 0;
+        let mut pending = roots.len();
+
+        if pending == 0 {
+            return Ok(None)
+        }
+
+        for i in 0..roots.len() {
+            if let Some(root) = try!(self.get_node(roots[i])) {
+                offset += root.length;
+                pending -= 1;
+                if pending == 0 {
+                    break;
+                }
+
+                if let Some(node) = try!(self.get_node(block)) {
+                    return Ok(Some((offset, node.length)));
+                }
+            }
+        }
+
+        Ok(None)
+    }
+
+    pub fn get_data(&mut self, index: u64) -> Result<Option<Vec<u8>>> {
+        if let Some((offset, size)) = try!(self.get_offset(index)) {
+            let mut buf: Vec<u8> = Vec::with_capacity(size as usize);
+            
+            try!(self.tree.seek(SeekFrom::Start(offset)));
+            try!(self.tree.read(&mut buf));
+
+            return Ok(Some(buf));
+        }
+
+        Ok(None)
     }
 }
 
@@ -120,4 +193,13 @@ fn header(file_type: FileType,) -> [u8; 32] {
     result[8..(8 + hash.len())].copy_from_slice(&hash);
 
     result
+}
+
+fn hash_is_blank(hash: &[u8]) -> bool {
+    for i in 0..hash.len() {
+        if hash[i] != 0 {
+            return false;
+        }
+    }
+    true
 }
