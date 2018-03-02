@@ -6,6 +6,8 @@ use sha2::Sha512;
 use ed25519_dalek::{Keypair, Signature};
 
 use storage::{Storage};
+use merkle::{Tree, Node};
+use tree;
 
 pub struct Feed {
     storage:    Storage,
@@ -13,6 +15,7 @@ pub struct Feed {
     length:     u64,
     key:        [u8; 32],
     secret:     [u8; 64],
+    merkle:     Tree,
 }
 
 impl Feed {
@@ -23,6 +26,9 @@ impl Feed {
         let mut key = [0u8; 32];
         let mut secret = [0u8; 64];
 
+        // Add discovery_key
+
+        let blocks = 0u64;
         // Load bitfield, tree, and blocks.
 
         if state.key.is_some() && state.secret.is_some() {
@@ -47,14 +53,18 @@ impl Feed {
             try!(storage.put_secret(secret));
         }
 
-        // Load merkle and length;
+        let roots = try!(storage.get_roots(blocks));
+        let merkle = Tree::with_roots(roots.clone());
+        let length = roots.into_iter()
+                          .fold(0, |sum, root| root.length + sum);
 
         Ok(Feed {
             storage:    storage,
-            blocks:     0,
-            length:     0,
+            blocks:     blocks,
+            length:     length,
             key:        key,
             secret:     secret,
+            merkle:     merkle,
         })
     }
 }

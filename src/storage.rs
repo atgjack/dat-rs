@@ -172,6 +172,19 @@ impl Storage {
         self.tree.write_all(&buf)
     }
 
+    pub fn get_roots(&mut self, index: u64) -> Result<Vec<Node>> {
+        let roots = tree::full_roots(2 * index);
+        let mut result: Vec<Node> = Vec::with_capacity(roots.len());
+        
+        for &root in &roots {
+            if let Some(node) =  try!(self.get_node(root)) {
+                result.push(node);
+            }
+        }
+
+        Ok(result)
+    } 
+
     pub fn get_data(&mut self, index: u64) -> Result<Option<Vec<u8>>> {
         if let Some((offset, size)) = try!(self.get_offset(index)) {
             let mut buf: Vec<u8> = Vec::with_capacity(size as usize);

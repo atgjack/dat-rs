@@ -66,6 +66,18 @@ impl Tree {
         }
     }
 
+    pub fn with_roots(roots: Vec<Node>) -> Tree {
+        let blocks = match roots.last() {
+            Some(last)  => tree::right_span(last.index) / 2,
+            None        => 0,
+        };
+
+        Tree {
+            roots:      roots,
+            blocks:     blocks,
+        }
+    }
+
     pub fn insert<D>(&mut self, data: Vec<u8>) 
                     where D: Digest<OutputSize=U64> {
         let node = Node::with_data::<D>(self.blocks * 2, data);
