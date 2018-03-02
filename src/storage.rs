@@ -84,32 +84,6 @@ impl Storage {
         })
     }
 
-    fn get_node(&mut self, index: u64) -> Result<Option<Node>> {
-        if let Some(node) = self.cache.get_mut(&index) {
-            return Ok(Some(node.clone()));
-        }
-
-        let mut buf = [0u8; 40];
-
-        try!(self.tree.seek(SeekFrom::Start(32 + 40 * index)));
-        try!(self.tree.read(&mut buf));
-        
-        let hash = &buf[..32];
-        let mut size: u64 = 0;
-        for i in 32..40 {
-            size <<= 8;
-            size += buf[i] as u64;
-        }
-
-        if size == 0 && hash_is_blank(&hash) {
-            return Ok(None);
-        }
-
-        let node = Node::with_hash(index, &hash, size);
-        self.cache.insert(index, node.clone());
-        Ok(Some(node))
-    }
-
     fn get_offset(&mut self, index: u64) -> Result<Option<(u64, u64)>> {
         let block = index * 2;
         let roots = tree::full_roots(block);
@@ -137,17 +111,112 @@ impl Storage {
         Ok(None)
     }
 
+    pub fn get_node(&mut self, index: u64) -> Result<Option<Node>> {
+        if let Some(node) = self.cache.get_mut(&index) {
+            return Ok(Some(node.clone()));
+        }
+
+        let mut buf = [0u8; 40];
+
+        try!(self.tree.seek(SeekFrom::Start(32 + 40 * index)));
+        try!(self.tree.read(&mut buf));
+        
+        let hash = &buf[..32];
+        let mut size: u64 = 0;
+        for i in 32..40 {
+            size <<= 8;
+            size += buf[i] as u64;
+        }
+
+        if size == 0 && hash_is_blank(&hash) {
+            return Ok(None);
+        }
+
+        let node = Node::with_hash(index, &hash, size);
+        self.cache.insert(index, node.clone());
+        Ok(Some(node))
+    }
+
+    pub fn put_node(&mut self, index: u64, node: Node) -> Result<()> {
+        let mut buf = [0u8; 40];
+        let size = node.length;
+
+        buf[..32].copy_from_slice(&node.hash);
+        for i in 0..8 {
+            buf[40 - i] = (size >> (8 * i)) as u8; 
+        }
+
+        try!(self.tree.seek(SeekFrom::Start(32 + 40 * index)));
+        self.tree.write_all(&buf)
+    }
+
     pub fn get_data(&mut self, index: u64) -> Result<Option<Vec<u8>>> {
         if let Some((offset, size)) = try!(self.get_offset(index)) {
             let mut buf: Vec<u8> = Vec::with_capacity(size as usize);
             
-            try!(self.tree.seek(SeekFrom::Start(offset)));
-            try!(self.tree.read(&mut buf));
+            try!(self.data.seek(SeekFrom::Start(offset)));
+            try!(self.data.read(&mut buf));
 
             return Ok(Some(buf));
         }
 
         Ok(None)
+    }
+
+    pub fn put_data(&mut self, index: u64, data: Vec<u8>) -> Result<()> {
+        if let Some((offset, size)) = try!(self.get_offset(index)) {
+            if data.len() != size as usize {
+                return Err(Error::new(ErrorKind::Other, "Unexpected data size."));
+            }
+
+            try!(self.data.seek(SeekFrom::Start(offset)));
+            return self.data.write_all(&data);
+        }
+
+        Ok(())
+    }
+
+    pub fn get_signature(&mut self, index: u64) -> Result<Option<Vec<u8>>> {
+        let mut hash: Vec<u8> = Vec::with_capacity(64);
+    
+        try!(self.signatures.seek(SeekFrom::Start(32 + 64 * index)));
+        try!(self.signatures.read(&mut hash));
+    
+        if hash_is_blank(&hash) {
+            return Ok(None);
+        }
+
+        Ok(Some(hash))
+    }
+
+    pub fn next_signature(&mut self, index: u64) -> Result<Option<Vec<u8>>> {
+        match try!(self.get_signature(index)) {
+            Some(hash)  => Ok(Some(hash)),
+            None        => self.get_signature(index + 1)
+        }
+    }
+
+    pub fn put_signature(&mut self, index: u64, hash: Vec<u8>) -> Result<()> {
+        try!(self.signatures.seek(SeekFrom::Start(32 + 64 * index)));
+        return self.signatures.write_all(&hash);
+    }
+
+    pub fn put_bitfield(&mut self, offset: u64, data: Vec<u8>) -> Result<()> {
+            try!(self.bitfield.seek(SeekFrom::Start(32 + offset)));
+            return self.bitfield.write_all(&data);
+    }
+
+    pub fn get_key(&mut self) -> Result<[u8; 32]> {
+        let mut buf = [0u8; 32];
+
+        try!(self.data.seek(SeekFrom::Start(0)));
+        let key_len = try!(self.data.read(&mut buf));
+
+        if key_len != buf.len() {
+            return Err(Error::new(ErrorKind::Other, "Unexpected key size."));
+        }
+
+        Ok(buf)
     }
 }
 
