@@ -7,7 +7,7 @@ use lru_cache::LruCache;
 use merkle::{Node};
 use tree;
 
-enum FileType { Tree, Signatures, Bitfield, Key, Data }
+enum FileType { Tree, Signatures, Bitfield, Key, Secret, Data }
 
 impl FileType {
     fn filename(&self) -> &str {
@@ -16,6 +16,7 @@ impl FileType {
             &FileType::Signatures   => "metadata.signatures",
             &FileType::Bitfield     => "metadata.bitfield",
             &FileType::Key          => "metadata.key",
+            &FileType::Secret       => "metadata.secret_key",
             &FileType::Data         => "metadata.data",
         }
     }
@@ -65,7 +66,14 @@ pub struct Storage {
     signatures:     File,
     bitfield:       File,
     key:            File,
+    secret:         File,
     data:           File,
+}
+
+pub struct StorageState {
+    pub bitfield:       Vec<u8>,
+    pub key:            Option<[u8; 32]>,
+    pub secret:         Option<[u8; 64]>,
 }
 
 impl Storage {
@@ -80,6 +88,7 @@ impl Storage {
             signatures:     try!(open_or_create(path, FileType::Signatures)),
             bitfield:       try!(open_or_create(path, FileType::Bitfield)),
             key:            try!(open_or_create(path, FileType::Key)),
+            secret:         try!(open_or_create(path, FileType::Secret)),
             data:           try!(open_or_create(path, FileType::Data)),
         })
     }
@@ -109,6 +118,19 @@ impl Storage {
         }
 
         Ok(None)
+    }
+
+    pub fn get_state(&mut self) -> Result<StorageState> {
+        let mut buf: Vec<u8> = Vec::with_capacity(3328);
+
+        try!(self.bitfield.seek(SeekFrom::Start(32)));
+        try!(self.bitfield.read_to_end(&mut buf));
+
+        Ok(StorageState {
+            bitfield:   buf,
+            key:        try!(self.get_key()),
+            secret:     try!(self.get_secret()),
+        })
     }
 
     pub fn get_node(&mut self, index: u64) -> Result<Option<Node>> {
@@ -206,17 +228,40 @@ impl Storage {
             return self.bitfield.write_all(&data);
     }
 
-    pub fn get_key(&mut self) -> Result<[u8; 32]> {
+    pub fn get_key(&mut self) -> Result<Option<[u8; 32]>> {
         let mut buf = [0u8; 32];
 
-        try!(self.data.seek(SeekFrom::Start(0)));
-        let key_len = try!(self.data.read(&mut buf));
+        try!(self.key.seek(SeekFrom::Start(0)));
+        let key_len = try!(self.key.read(&mut buf));
 
         if key_len != buf.len() {
-            return Err(Error::new(ErrorKind::Other, "Unexpected key size."));
+            return Ok(None);
         }
 
-        Ok(buf)
+        Ok(Some(buf))
+    }
+
+    pub fn put_key(&mut self, data: [u8; 32]) -> Result<()> {
+        try!(self.key.seek(SeekFrom::Start(0)));
+        self.key.write_all(&data)        
+    }
+
+    pub fn get_secret(&mut self) -> Result<Option<[u8; 64]>> {
+        let mut buf = [0u8; 64];
+
+        try!(self.secret.seek(SeekFrom::Start(0)));
+        let secret_len = try!(self.secret.read(&mut buf));
+
+        if secret_len != buf.len() {
+            return Ok(None);
+        }
+
+        Ok(Some(buf))
+    }
+    
+    pub fn put_secret(&mut self, data: [u8; 64]) -> Result<()> {
+        try!(self.secret.seek(SeekFrom::Start(0)));
+        self.secret.write_all(&data)        
     }
 }
 
