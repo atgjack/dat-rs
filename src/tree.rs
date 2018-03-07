@@ -123,3 +123,11 @@ pub fn full_roots(idx: u64) -> Vec<u64> {
 
     vec
 }
+
+pub fn is_left(idx: u64) -> bool {
+    offset(idx) & 1 == 0
+}
+
+pub fn is_right(idx: u64) -> bool {
+    !is_left(idx)
+}

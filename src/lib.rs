@@ -8,4 +8,5 @@ extern crate ed25519_dalek;
 pub mod tree;
 pub mod merkle;
 pub mod storage;
+pub mod bitfield;
 pub mod feed;
