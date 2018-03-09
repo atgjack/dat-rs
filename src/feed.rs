@@ -6,8 +6,8 @@ use sha2::Sha512;
 use ed25519_dalek::{Keypair, Signature};
 
 use storage::{Storage};
-use merkle::{Tree, Node};
-use tree;
+use merkle::{Tree};
+use bitfield::{Bitfield, TreeIndex};
 
 pub struct Feed {
     storage:    Storage,
@@ -16,6 +16,8 @@ pub struct Feed {
     key:        [u8; 32],
     secret:     [u8; 64],
     merkle:     Tree,
+    bitfield:   Bitfield,
+    tree:       TreeIndex,
 }
 
 impl Feed {
@@ -28,8 +30,9 @@ impl Feed {
 
         // Add discovery_key
 
-        let blocks = 0u64;
-        // Load bitfield, tree, and blocks.
+        let bitfield = Bitfield::from_buffer(state.bitfield);
+        let tree = bitfield.get_tree();
+        let blocks = tree.blocks();
 
         if state.key.is_some() && state.secret.is_some() {
             key = state.key.unwrap();
@@ -65,6 +68,8 @@ impl Feed {
             key:        key,
             secret:     secret,
             merkle:     merkle,
+            bitfield:   bitfield,
+            tree:       tree,
         })
     }
 }

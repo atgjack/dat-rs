@@ -1,18 +1,18 @@
 // Utilites
 
-fn offset_with_depth(idx: u64, depth: u64) -> u64 {
+pub fn offset_with_depth(idx: u64, depth: u64) -> u64 {
     idx >> (depth + 1)
 }
 
-fn parent_with_depth(idx: u64, depth: u64) -> u64 {
+pub fn parent_with_depth(idx: u64, depth: u64) -> u64 {
     index(depth + 1, offset_with_depth(idx, depth) >> 1)
 }
 
-fn sibling_with_depth(idx: u64, depth: u64) -> u64 {
+pub fn sibling_with_depth(idx: u64, depth: u64) -> u64 {
     index(depth, offset(idx) ^ 1)
 }
 
-fn child_with_depth(idx: u64, depth: u64, is_left: bool) -> Option<u64>  {
+pub fn child_with_depth(idx: u64, depth: u64, is_left: bool) -> Option<u64>  {
     if depth == 0 {
         return None;
     }
@@ -21,7 +21,7 @@ fn child_with_depth(idx: u64, depth: u64, is_left: bool) -> Option<u64>  {
     Some(index(depth - 1, offset_with_depth(idx, depth << 1) + adder))
 }
 
-fn span_with_depth(idx: u64, depth: u64, is_left: bool) -> u64 {
+pub fn span_with_depth(idx: u64, depth: u64, is_left: bool) -> u64 {
     if depth == 0  { 
         return idx; 
     }
