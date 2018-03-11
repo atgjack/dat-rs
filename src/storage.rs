@@ -1,5 +1,5 @@
 use std::io::{Result, Error, ErrorKind, Write, Read, Seek, SeekFrom};
-use std::fs::{File, OpenOptions};
+use std::fs::{File, OpenOptions, create_dir};
 use std::path::{Path};
 
 use lru_cache::LruCache;
@@ -32,7 +32,8 @@ impl FileType {
 
     fn entry_size(&self) -> Option<u16> {
         match self {
-            &FileType::Tree         => Some(40u16),
+            // &FileType::Tree         => Some(40u16),
+            &FileType::Tree         => Some(72u16),
             &FileType::Signatures   => Some(64u16),
             &FileType::Bitfield     => Some(3328u16),
             _                       => None,
@@ -82,6 +83,13 @@ impl Storage {
             return Err(Error::new(ErrorKind::Other, "Path is not a directory"));
         }
 
+        let path = &path.join(".dat");
+        if let Err(err) = create_dir(&path) {
+            if err.kind() != ErrorKind::AlreadyExists {
+                return Err(err);
+            }
+        };
+
         Ok(Storage {
             cache:          LruCache::new(65536),
             tree:           try!(open_or_create(path, FileType::Tree)),
@@ -94,27 +102,18 @@ impl Storage {
     }
 
     fn get_offset(&mut self, index: u64) -> Result<Option<(u64, u64)>> {
-        let block = index * 2;
+        let block = index;
         let roots = tree::full_roots(block);
         let mut offset = 0;
-        let mut pending = roots.len();
 
-        if pending == 0 {
-            return Ok(None)
+        for &root in &roots {
+            if let Some(root) = try!(self.get_node(root)) {
+                offset += root.length;
+            }
         }
 
-        for i in 0..roots.len() {
-            if let Some(root) = try!(self.get_node(roots[i])) {
-                offset += root.length;
-                pending -= 1;
-                if pending == 0 {
-                    break;
-                }
-
-                if let Some(node) = try!(self.get_node(block)) {
-                    return Ok(Some((offset, node.length)));
-                }
-            }
+        if let Some(node) = try!(self.get_node(block)) {
+            return Ok(Some((offset, node.length)));
         }
 
         Ok(None)
@@ -125,7 +124,7 @@ impl Storage {
 
         try!(self.bitfield.seek(SeekFrom::Start(32)));
         try!(self.bitfield.read_to_end(&mut buf));
-
+        
         Ok(StorageState {
             bitfield:   buf,
             key:        try!(self.get_key()),
@@ -138,14 +137,18 @@ impl Storage {
             return Ok(Some(node.clone()));
         }
 
-        let mut buf = [0u8; 40];
+        // let mut buf = [0u8; 40];
+        let mut buf = [0u8; 72];
 
-        try!(self.tree.seek(SeekFrom::Start(32 + 40 * index)));
+        // try!(self.tree.seek(SeekFrom::Start(32 + 40 * index)));
+        try!(self.tree.seek(SeekFrom::Start(32 + 72 * index)));
         try!(self.tree.read(&mut buf));
         
-        let hash = &buf[..32];
+        // let hash = &buf[..32];
+        let hash = &buf[..64];
         let mut size: u64 = 0;
-        for i in 32..40 {
+        // for i in 32..40 {
+        for i in 64..72 {
             size <<= 8;
             size += buf[i] as u64;
         }
@@ -160,15 +163,19 @@ impl Storage {
     }
 
     pub fn put_node(&mut self, index: u64, node: Node) -> Result<()> {
-        let mut buf = [0u8; 40];
+        // let mut buf = [0u8; 40];
+        let mut buf = [0u8; 72];
         let size = node.length;
 
-        buf[..32].copy_from_slice(&node.hash);
+        // buf[..32].copy_from_slice(&node.hash[..32]);
+        buf[..64].copy_from_slice(&node.hash[..64]);
         for i in 0..8 {
-            buf[40 - i] = (size >> (8 * i)) as u8; 
+        //     buf[39 - i] = (size >> (8 * i)) as u8; 
+             buf[71 - i] = (size >> (8 * i)) as u8; 
         }
 
-        try!(self.tree.seek(SeekFrom::Start(32 + 40 * index)));
+        // try!(self.tree.seek(SeekFrom::Start(32 + 40 * index)));
+        try!(self.tree.seek(SeekFrom::Start(32 + 72 * index)));
         self.tree.write_all(&buf)
     }
 
@@ -187,7 +194,7 @@ impl Storage {
 
     pub fn get_data(&mut self, index: u64) -> Result<Option<Vec<u8>>> {
         if let Some((offset, size)) = try!(self.get_offset(index)) {
-            let mut buf: Vec<u8> = Vec::with_capacity(size as usize);
+            let mut buf: Vec<u8> = vec![0u8; size as usize];
             
             try!(self.data.seek(SeekFrom::Start(offset)));
             try!(self.data.read(&mut buf));
@@ -203,7 +210,7 @@ impl Storage {
             if data.len() != size as usize {
                 return Err(Error::new(ErrorKind::Other, "Unexpected data size."));
             }
-
+            
             try!(self.data.seek(SeekFrom::Start(offset)));
             return self.data.write_all(&data);
         }
@@ -279,14 +286,14 @@ impl Storage {
 }
 
 fn open_or_create(path: &Path, file_type: FileType) -> Result<File> {
-    match OpenOptions::new().write(true).open(path.join(file_type.filename())) {
+    match OpenOptions::new().read(true).write(true).open(path.join(file_type.filename())) {
         Ok(file) => Ok(file),
         Err(_) => create_file(path, file_type)
     }
 }
 
 fn create_file(path: &Path, file_type: FileType) -> Result<File> {
-    let mut file = match File::create(path.join(file_type.filename())) {
+    let mut file = match OpenOptions::new().create(true).read(true).write(true).open(path.join(file_type.filename())) {
         Ok(file) => file,
         Err(err) => return Err(err),
     };

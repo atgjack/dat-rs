@@ -13,12 +13,12 @@ pub fn sibling_with_depth(idx: u64, depth: u64) -> u64 {
 }
 
 pub fn child_with_depth(idx: u64, depth: u64, is_left: bool) -> Option<u64>  {
-    if depth == 0 {
+    if depth == 0 || idx & 1 == 0 {
         return None;
     }
 
     let adder = if is_left { 0 } else { 1 };
-    Some(index(depth - 1, offset_with_depth(idx, depth << 1) + adder))
+    Some(index(depth - 1, (offset_with_depth(idx, depth) * 2) + adder))
 }
 
 pub fn span_with_depth(idx: u64, depth: u64, is_left: bool) -> u64 {

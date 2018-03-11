@@ -11,4 +11,5 @@ lru-cache = "0.1.1"
 ed25519-dalek = "0.6.1"
 sha2 = "0.7.0"
 rand = "0.4.2"
-
+indexmap = "0.4.1"
+futures = "0.1.18"
