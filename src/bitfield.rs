@@ -1,5 +1,5 @@
 use std::collections::{HashMap};
-use std::collections::hash_map::Iter;
+use std::collections::hash_map::{Iter, Entry};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::ops::{Range};
@@ -27,14 +27,21 @@ impl Pager {
     }
 
     pub fn set(&mut self, page_num: usize, byte_num: usize, value: u8) -> bool {
-        let page = self.map.entry(page_num).or_insert(vec![0; PAGE_SIZE]);
-        if page[byte_num] == value {
-            return false;
-        } else {
-            page[byte_num] = value;
-            self.updated.insert(page_num);
-            return true;
+        match self.map.entry(page_num) {
+            Entry::Vacant(page) => {
+                if value == 0 { return false; }
+                let mut vec = vec![0u8; PAGE_SIZE];
+                vec[byte_num] = value;
+                page.insert(vec);
+            },
+            Entry::Occupied(entry) => {
+                let mut page = entry.into_mut();
+                if page[byte_num] == value { return false; }
+                page[byte_num] = value;
+            }
         }
+        self.updated.insert(page_num);
+        true
     }
 
     pub fn insert(&mut self, index: usize, value: Vec<u8>) {
@@ -101,12 +108,16 @@ impl SparseBitfield {
 
     pub fn set_byte(&mut self, index: u64, value: u8) -> bool {
         let page_num = self.get_page_num(index);
-        let byte_num = self.get_byte_num(index);        
+        let byte_num = self.get_byte_num(index);
         self.pager.borrow_mut().set(page_num, byte_num, value)
     }
 
     pub fn len(&self) -> u64 {
         self.pager.borrow().len() as u64 * PAGE_SIZE as u64 * 8
+    }
+
+    pub fn pages(&self) -> u64 {
+        self.pager.borrow().len() as u64
     }
 
     fn get_offset(&self, index: u64) -> u8 {
@@ -115,11 +126,11 @@ impl SparseBitfield {
     }
 
     fn get_page_num(&self, index: u64) -> usize {
-        index as usize / self.size
+        (index as usize) / (self.size * 8)
     }
 
     fn get_byte_num(&self, index: u64) -> usize {
-        self.offset + (index as usize & (self.size - 1)) / 8
+        self.offset + ((index as usize / 8) & (self.size - 1))
     }
 }
 
@@ -158,7 +169,7 @@ impl IndexBitfield {
         };
         let mask: u8 = !(3 << (6 - (o * 2)));
         let mut byte = (self.bitfield.get_byte(start) & mask) | tup << (2 * 0);
-        let max_len = self.bitfield.len();
+        let max_len = self.bitfield.pages() * 256;
 
         let mut current = start;
 
@@ -199,8 +210,8 @@ impl TreeIndex {
     }
 
     pub fn set(&mut self, index: u64) -> bool {
-        let mut current = index;
-        if !self.bitfield.set(index, true) { return false; }
+        let mut current = index * 2;
+        if !self.bitfield.set(current, true) { return false; }
         while self.bitfield.get(tree::sibling(current)) {
             current = tree::parent(current);
             if !self.bitfield.set(current, true) { break; }
@@ -437,6 +448,10 @@ impl Bitfield {
         Bitfield::with_pager(pager)
     }
 
+    pub fn get_tree(&self) -> TreeIndex {
+        TreeIndex::with_bitfield(SparseBitfield::with_pager(Rc::clone(&self.pager), 1024, 2048))
+    }
+
     pub fn get(&self, index: u64) -> bool {
         self.data.get(index)
     }
@@ -492,10 +507,6 @@ impl Bitfield {
             result[start..(start + PAGE_SIZE)].copy_from_slice(value.as_slice());
         }
         result
-    }
-
-    pub fn get_tree(&self) -> TreeIndex {
-        TreeIndex::with_bitfield(SparseBitfield::with_pager(Rc::clone(&self.pager), 2048, 1024))
     }
 
     pub fn last_updated(&mut self) -> Option<(usize, Vec<u8>)> {

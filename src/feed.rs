@@ -103,11 +103,10 @@ impl Feed {
     // }
 
         pub fn get(&mut self, index: u64) -> Result<Option<Vec<u8>>> {
-            let block = index * 2;
-            if !self.bitfield.get(block) {
+            if !self.bitfield.get(index) {
                 return Err(io::Error::new(io::ErrorKind::Other, "Index not found."));
             }
-            self.storage.get_data(block)
+            self.storage.get_data(index * 2)
         }
 
     // pub fn head(&mut self) -> DataFuture {
@@ -159,12 +158,12 @@ impl Feed {
             }
         }
 
-        self.length += len as u64;
-        self.bitfield.set(self.blocks * 2, true);
-        self.tree.set(self.blocks * 2);
+        self.bitfield.set(self.blocks, true);
+        self.tree.set(self.blocks);
         while let Some((offset, data)) = self.bitfield.last_updated() {
                 try!(self.storage.put_bitfield(offset as u64, data));
         }
+        self.length += len as u64;
         self.blocks += 1;
 
         self.sign_roots()
