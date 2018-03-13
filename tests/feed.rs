@@ -18,13 +18,13 @@ fn cleanup() {
 
 #[test]
 fn test_can_open_dir() {
-    // cleanup();
+    cleanup();
 
     let path = Path::new(DIR_PATH);
     let mut feed = Feed::new(path).unwrap();
-    let data = vec![0u8; 1024 * 4];
+    let data = vec![0u8; 1024 * 1];
 
-    for i in 0..1000 {
+    for i in 0..65536 {
         feed.append(data.clone()).unwrap();
         assert_eq!(feed.get(i).unwrap().unwrap(), data.clone());
     }

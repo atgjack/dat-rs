@@ -137,18 +137,14 @@ impl Storage {
             return Ok(Some(node.clone()));
         }
 
-        // let mut buf = [0u8; 40];
-        let mut buf = [0u8; 72];
+        let mut buf = [0u8; 40];
 
-        // try!(self.tree.seek(SeekFrom::Start(32 + 40 * index)));
-        try!(self.tree.seek(SeekFrom::Start(32 + 72 * index)));
+        try!(self.tree.seek(SeekFrom::Start(32 + 40 * index)));
         try!(self.tree.read(&mut buf));
         
-        // let hash = &buf[..32];
-        let hash = &buf[..64];
+        let hash = &buf[..32];
         let mut size: u64 = 0;
-        // for i in 32..40 {
-        for i in 64..72 {
+        for i in 32..40 {
             size <<= 8;
             size += buf[i] as u64;
         }
@@ -163,19 +159,15 @@ impl Storage {
     }
 
     pub fn put_node(&mut self, index: u64, node: Node) -> Result<()> {
-        // let mut buf = [0u8; 40];
-        let mut buf = [0u8; 72];
+        let mut buf = [0u8; 40];
         let size = node.length;
 
-        // buf[..32].copy_from_slice(&node.hash[..32]);
-        buf[..64].copy_from_slice(&node.hash[..64]);
+        buf[..32].copy_from_slice(&node.hash[..32]);
         for i in 0..8 {
-        //     buf[39 - i] = (size >> (8 * i)) as u8; 
-             buf[71 - i] = (size >> (8 * i)) as u8; 
+            buf[39 - i] = (size >> (8 * i)) as u8; 
         }
 
-        // try!(self.tree.seek(SeekFrom::Start(32 + 40 * index)));
-        try!(self.tree.seek(SeekFrom::Start(32 + 72 * index)));
+        try!(self.tree.seek(SeekFrom::Start(32 + 40 * index)));
         self.tree.write_all(&buf)
     }
 

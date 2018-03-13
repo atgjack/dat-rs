@@ -1,6 +1,4 @@
-use digest::Digest;
-use generic_array::GenericArray;
-use generic_array::typenum::U64;
+use digest::{Digest, VariableOutput};
 
 use tree;
 
@@ -10,44 +8,50 @@ pub struct Node {
     pub parent: u64,
     pub length: u64,
     pub data:   Option<Vec<u8>>,
-    pub hash:   GenericArray<u8, U64>,
+    pub hash:   [u8; 32],
 }
 
 impl Node {
     pub fn with_hash(idx: u64, hash: &[u8], length: u64) -> Node {
+        let mut arr = [0u8; 32];
+        arr.copy_from_slice(hash);
         Node {
             index:      idx,
             parent:     tree::parent(idx),
             length:     length,
             data:       None,
-            hash:       GenericArray::clone_from_slice(hash)
+            hash:       arr,
         }
     }
 
     pub fn with_data<D>(idx: u64, data: Vec<u8>) -> Node
-                        where D: Digest<OutputSize=U64> {
-        let mut hasher = D::new();
+                        where D: VariableOutput + Digest {
+        let mut arr = [0u8; 32];
+        let mut hasher: D = VariableOutput::new(32).unwrap();
         hasher.input(&data);
+        hasher.variable_result(&mut arr).unwrap();
         Node {
             index:      idx,
             parent:     tree::parent(idx),
             length:     data.len() as u64,
             data:       Some(data),
-            hash:       hasher.result(),
+            hash:       arr,
         }
     }
 
     pub fn with_nodes<D>(left: &Node, right: &Node) -> Node
-                        where D: Digest<OutputSize=U64> {
-        let mut hasher = D::new();
+                        where D: VariableOutput + Digest {
+        let mut arr = [0u8; 32];
+        let mut hasher: D = VariableOutput::new(32).unwrap();
         hasher.input(&left.hash);
         hasher.input(&right.hash);
+        hasher.variable_result(&mut arr).unwrap();
         Node {
             index:      left.parent,
             parent:     tree::parent(left.parent),
             length:     left.length + right.length,
             data:       None,
-            hash:       hasher.result(),
+            hash:       arr,
         }
     }
 }
@@ -79,7 +83,7 @@ impl Tree {
     }
     
     pub fn insert<D>(&mut self, data: Vec<u8>) -> Vec<Node>
-                    where D: Digest<OutputSize=U64> {
+                    where D: VariableOutput + Digest {
         let mut nodes: Vec<Node> = Vec::new();
         let node = Node::with_data::<D>(self.blocks * 2, data);
         self.blocks += 1;
