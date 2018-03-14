@@ -1,6 +1,6 @@
 use digest::{Digest, VariableOutput};
 
-use flat;
+use core::flat;
 
 #[derive(Debug, Clone)]
 pub struct Node {

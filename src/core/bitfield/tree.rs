@@ -1,5 +1,5 @@
-use bitfield::sparse::SparseBitfield;
-use flat;
+use core::bitfield::sparse::SparseBitfield;
+use core::flat;
 
 pub struct TreeBitfield {
     bitfield: SparseBitfield

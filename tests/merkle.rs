@@ -1,8 +1,9 @@
 extern crate dat;
 extern crate blake2;
 
-use dat::merkle::{Tree};
 use blake2::Blake2b;
+
+use dat::core::merkle::Tree;
 
 #[test]
 fn test_one_root_on_power_of_two() {

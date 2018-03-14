@@ -4,8 +4,8 @@ use std::path::{Path};
 
 use lru_cache::LruCache;
 
-use merkle::{Node};
-use flat;
+use core::merkle::Node;
+use core::flat;
 
 enum FileType { Tree, Signatures, Bitfield, Key, Secret, Data }
 

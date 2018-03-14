@@ -1,9 +1,9 @@
 extern crate dat;
 
 use std::fs::remove_dir_all;
+use std::path::Path;
 
-use dat::feed::{Feed};
-use std::path::{Path};
+use dat::core::feed::Feed;
 
 const DIR_PATH: &str = "/home/vader/test";
 

@@ -7,10 +7,10 @@ mod sparse;
 pub mod index;
 pub mod tree;
 
-use bitfield::pager::Pager;
-use bitfield::sparse::SparseBitfield;
-use bitfield::index::IndexBitfield;
-use bitfield::tree::TreeBitfield;
+use core::bitfield::pager::Pager;
+use core::bitfield::sparse::SparseBitfield;
+use core::bitfield::index::IndexBitfield;
+use core::bitfield::tree::TreeBitfield;
 
 pub struct Bitfield {
     pager:        Rc<RefCell<Pager>>,

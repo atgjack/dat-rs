@@ -8,10 +8,10 @@ use sha2::Sha512;
 use blake2::{Blake2b, Digest};
 use ed25519_dalek::{Keypair, Signature};
 
-use storage::Storage;
-use merkle::Tree;
-use bitfield::Bitfield;
-use bitfield::tree::TreeBitfield;
+use core::storage::Storage;
+use core::merkle::Tree;
+use core::bitfield::Bitfield;
+use core::bitfield::tree::TreeBitfield;
 
 // const LEAF_TYPE : &'static [u8] = &[0];
 // const PARENT_TYPE : &'static [u8] = &[1];

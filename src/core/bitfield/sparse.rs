@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use bitfield::pager::Pager;
+use core::bitfield::pager::Pager;
 
 pub struct SparseBitfield {
     pager:      Rc<RefCell<Pager>>,
