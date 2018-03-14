@@ -24,7 +24,7 @@ fn test_can_open_dir() {
     let mut feed = Feed::new(path).unwrap();
     let data = vec![0u8; 1024 * 64];
 
-    for i in 0..(1024 * 64) {
+    for i in 0..(1024 * 1) {
         feed.append(data.clone()).unwrap();
         assert_eq!(feed.get(i).unwrap().unwrap(), data.clone());
     }

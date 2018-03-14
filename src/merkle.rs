@@ -1,6 +1,6 @@
 use digest::{Digest, VariableOutput};
 
-use tree;
+use flat;
 
 #[derive(Debug, Clone)]
 pub struct Node {
@@ -17,7 +17,7 @@ impl Node {
         arr.copy_from_slice(hash);
         Node {
             index:      idx,
-            parent:     tree::parent(idx),
+            parent:     flat::parent(idx),
             length:     length,
             data:       None,
             hash:       arr,
@@ -32,7 +32,7 @@ impl Node {
         hasher.variable_result(&mut arr).unwrap();
         Node {
             index:      idx,
-            parent:     tree::parent(idx),
+            parent:     flat::parent(idx),
             length:     data.len() as u64,
             data:       Some(data),
             hash:       arr,
@@ -48,7 +48,7 @@ impl Node {
         hasher.variable_result(&mut arr).unwrap();
         Node {
             index:      left.parent,
-            parent:     tree::parent(left.parent),
+            parent:     flat::parent(left.parent),
             length:     left.length + right.length,
             data:       None,
             hash:       arr,
@@ -72,7 +72,7 @@ impl Tree {
 
     pub fn with_roots(roots: Vec<Node>) -> Tree {
         let blocks = match roots.last() {
-            Some(last)  => 1 + tree::right_span(last.index) / 2,
+            Some(last)  => 1 + flat::right_span(last.index) / 2,
             None        => 0,
         };
 

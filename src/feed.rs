@@ -8,9 +8,10 @@ use sha2::Sha512;
 use blake2::{Blake2b, Digest};
 use ed25519_dalek::{Keypair, Signature};
 
-use storage::{Storage};
-use merkle::{Tree};
-use bitfield::{Bitfield, TreeIndex};
+use storage::Storage;
+use merkle::Tree;
+use bitfield::Bitfield;
+use bitfield::tree::TreeBitfield;
 
 // const LEAF_TYPE : &'static [u8] = &[0];
 // const PARENT_TYPE : &'static [u8] = &[1];
@@ -25,7 +26,7 @@ pub struct Feed {
     secret:     [u8; 64],
     merkle:     Tree,
     bitfield:   Bitfield,
-    tree:       TreeIndex,
+    tree:       TreeBitfield,
 }
 
 impl Feed {

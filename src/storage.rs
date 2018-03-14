@@ -5,7 +5,7 @@ use std::path::{Path};
 use lru_cache::LruCache;
 
 use merkle::{Node};
-use tree;
+use flat;
 
 enum FileType { Tree, Signatures, Bitfield, Key, Secret, Data }
 
@@ -103,7 +103,7 @@ impl Storage {
 
     fn get_offset(&mut self, index: u64) -> Result<Option<(u64, u64)>> {
         let block = index;
-        let roots = tree::full_roots(block);
+        let roots = flat::full_roots(block);
         let mut offset = 0;
 
         for &root in &roots {
@@ -172,7 +172,7 @@ impl Storage {
     }
 
     pub fn get_roots(&mut self, index: u64) -> Result<Vec<Node>> {
-        let roots = tree::full_roots(2 * index);
+        let roots = flat::full_roots(2 * index);
         let mut result: Vec<Node> = Vec::with_capacity(roots.len());
         
         for &root in &roots {

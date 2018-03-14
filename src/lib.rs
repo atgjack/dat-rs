@@ -8,7 +8,7 @@ extern crate blake2;
 extern crate indexmap;
 extern crate futures;
 
-pub mod tree;
+pub mod flat;
 pub mod merkle;
 pub mod storage;
 pub mod bitfield;
