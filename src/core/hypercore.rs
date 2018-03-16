@@ -18,7 +18,7 @@ use core::bitfield::tree::TreeBitfield;
 const ROOT_TYPE: &'static [u8] = &[2];
 // const HYPERCORE: &'static [u8] = b"hypercore";
 
-pub struct Feed {
+pub struct Hypercore {
     storage:    Storage,
     blocks:     u64,
     length:     u64,
@@ -29,8 +29,8 @@ pub struct Feed {
     tree:       TreeBitfield,
 }
 
-impl Feed {
-    pub fn new(path: &Path) -> Result<Feed> {
+impl Hypercore {
+    pub fn new(path: &Path) -> Result<Hypercore> {
         let mut storage = try!(Storage::new(path));
         let state = try!(storage.get_state());
         let mut generate_key = true;
@@ -69,7 +69,7 @@ impl Feed {
         let merkle = Tree::with_roots(roots.clone());
         let length = roots.into_iter().fold(0, |sum, root| root.length + sum);
 
-        Ok(Feed {
+        Ok(Hypercore {
             storage:    storage,
             blocks:     blocks,
             length:     length,

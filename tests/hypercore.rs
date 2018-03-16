@@ -3,7 +3,7 @@ extern crate dat;
 use std::fs::remove_dir_all;
 use std::path::Path;
 
-use dat::core::feed::Feed;
+use dat::core::hypercore::Hypercore;
 
 const DIR_PATH: &str = "/home/vader/test";
 
@@ -21,10 +21,11 @@ fn test_can_open_dir() {
     cleanup();
 
     let path = Path::new(DIR_PATH);
-    let mut feed = Feed::new(path).unwrap();
+    let mut feed = Hypercore::new(path).unwrap();
     let data = vec![0u8; 1024 * 64];
 
-    for i in 0..(1024 * 1) {
+    // for i in 0..(1024 * 64) {
+    for i in 0..64 {
         feed.append(data.clone()).unwrap();
         assert_eq!(feed.get(i).unwrap().unwrap(), data.clone());
     }
