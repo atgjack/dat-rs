@@ -1,6 +1,5 @@
 use std::io;
 use std::io::{Result};
-use std::path::{Path};
 use std::ops::{Range};
 
 use rand::OsRng;
@@ -18,8 +17,8 @@ use core::bitfield::tree::TreeBitfield;
 const ROOT_TYPE: &'static [u8] = &[2];
 // const HYPERCORE: &'static [u8] = b"hypercore";
 
-pub struct Hypercore {
-    storage:    Storage,
+pub struct Hypercore<T: Storage> {
+    storage:    T,
     blocks:     u64,
     length:     u64,
     key:        [u8; 32],
@@ -29,9 +28,8 @@ pub struct Hypercore {
     tree:       TreeBitfield,
 }
 
-impl Hypercore {
-    pub fn new(path: &Path) -> Result<Hypercore> {
-        let mut storage = try!(Storage::new(path));
+impl<T: Storage> Hypercore<T> {
+    pub fn new(mut storage: T) -> Result<Hypercore<T>> {
         let state = try!(storage.get_state());
         let mut generate_key = true;
         let mut key = [0u8; 32];
