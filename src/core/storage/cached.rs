@@ -2,7 +2,7 @@ use std::io::Result;
 use lru_cache::LruCache;
 
 use core::storage::{Storage, FileType};
-use core::merkle::Node;
+use common::merkle::Node;
 
 pub struct CachedStorage<T: Storage> {
     cache:          LruCache<u64, Node>,

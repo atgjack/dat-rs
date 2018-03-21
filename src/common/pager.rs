@@ -19,6 +19,24 @@ impl Pager {
         }
     }
 
+    pub fn from_vec(vec: Vec<u8>) -> Pager {
+        let mut pager = Pager::new();
+        let length = vec.len();
+        let mut offset: usize = 0;
+        let mut page_num: usize = 0;
+        while offset < length {
+            let mut end = offset + PAGE_SIZE;
+            if end > length {
+                end = length;
+            }
+            pager.insert(page_num, vec[offset..end].to_vec());
+            offset += PAGE_SIZE;
+            page_num += 1;
+        }
+
+        pager
+    }
+
     pub fn get(&self, index: usize) -> Option<&Vec<u8>> {
         self.map.get(&index)
     }

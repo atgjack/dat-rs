@@ -1,7 +1,7 @@
 use std::io::{Result, Error, ErrorKind};
 
-use core::merkle::Node;
-use core::flat;
+use common::merkle::Node;
+use common::flat;
 
 pub mod file;
 pub mod cached;

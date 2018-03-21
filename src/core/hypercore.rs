@@ -7,10 +7,9 @@ use sha2::Sha512;
 use blake2::{Blake2b, Digest};
 use ed25519_dalek::{Keypair, Signature};
 
+use common::merkle::Tree;
 use core::storage::Storage;
-use core::merkle::Tree;
 use core::bitfield::Bitfield;
-use core::bitfield::tree::TreeBitfield;
 
 // const LEAF_TYPE : &'static [u8] = &[0];
 // const PARENT_TYPE : &'static [u8] = &[1];
@@ -25,7 +24,6 @@ pub struct Hypercore<T: Storage> {
     secret:     [u8; 64],
     merkle:     Tree,
     bitfield:   Bitfield,
-    tree:       TreeBitfield,
 }
 
 impl<T: Storage> Hypercore<T> {
@@ -37,9 +35,8 @@ impl<T: Storage> Hypercore<T> {
 
         // Add discovery_key
 
-        let bitfield = Bitfield::from_buffer(state.bitfield);
-        let tree = bitfield.get_tree();
-        let blocks = tree.blocks();
+        let bitfield = Bitfield::from_vec(state.bitfield);
+        let blocks = bitfield.blocks();
 
         if state.key.is_some() && state.secret.is_some() {
             key = state.key.unwrap();
@@ -75,7 +72,6 @@ impl<T: Storage> Hypercore<T> {
             secret:     secret,
             merkle:     merkle,
             bitfield:   bitfield,
-            tree:       tree,
         })
     }
 
@@ -158,7 +154,6 @@ impl<T: Storage> Hypercore<T> {
         }
 
         self.bitfield.set(self.blocks, true);
-        self.tree.set(self.blocks);
         while let Some((offset, data)) = self.bitfield.last_updated() {
                 try!(self.storage.put_bitfield(offset as u64, data));
         }
