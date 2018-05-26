@@ -21,7 +21,6 @@ pub struct StorageState {
 }
 
 pub trait Storage {
-    fn init_archive(&mut self, file_type: FileType) -> bool;
     fn read_archive(&mut self, file_type: FileType, offset: u64, buf: &mut [u8]) -> Result<usize>;
     fn write_archive(&mut self, file_type: FileType, offset: u64, buf: &[u8]) -> Result<()>;
 
@@ -29,10 +28,13 @@ pub trait Storage {
         let file_types = [FileType::Tree, FileType::Signatures, FileType::Bitfield, FileType::Key, FileType::Secret, FileType::Data];
 
         for &file_type in &file_types {
-            if self.init_archive(file_type){
-                if let Some(header) = create_header(file_type) {
-                    try!(self.write_archive(file_type, 0, &header));
-                } 
+            if let Some(header) = create_header(file_type) {
+                let mut buf = vec![0u8; header.len()];
+                if let Ok(num_bytes) = self.read_archive(file_type, 0, &mut buf) {
+                    if num_bytes != header.len() || buf != header {
+                        try!(self.write_archive(file_type, 0, &header));
+                    }
+                }
             }
         }
 

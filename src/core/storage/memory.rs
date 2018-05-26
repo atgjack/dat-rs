@@ -36,10 +36,6 @@ impl MemoryStorage {
 }
 
 impl Storage for MemoryStorage {
-    fn init_archive(&mut self, _file_type: FileType) -> bool {
-        false
-    }
-
     fn read_archive(&mut self, file_type: FileType, offset: u64, mut buf: &mut [u8]) -> Result<usize> {
         let file = self.get_file(file_type);
         try!(file.seek(SeekFrom::Start(offset)));

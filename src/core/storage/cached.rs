@@ -19,10 +19,6 @@ impl<T: Storage> CachedStorage<T> {
 }
 
 impl<T: Storage> Storage for CachedStorage<T> {
-    fn init_archive(&mut self, file_type: FileType) -> bool {
-        self.storage.init_archive(file_type)   
-    }
-
     fn read_archive(&mut self, file_type: FileType, offset: u64, buf: &mut [u8]) -> Result<usize> {
         self.storage.read_archive(file_type, offset, buf)
     }

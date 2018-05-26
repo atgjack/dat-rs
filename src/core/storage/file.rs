@@ -49,14 +49,6 @@ impl FileStorage {
 }
 
 impl Storage for FileStorage {
-    fn init_archive(&mut self, file_type: FileType) -> bool {
-        let file = self.get_file(file_type);
-        match file.metadata() {
-            Ok(metadata) => metadata.len() > 0,
-            Err(_)       => false
-        }
-    }
-
     fn read_archive(&mut self, file_type: FileType, offset: u64, mut buf: &mut [u8]) -> Result<usize> {
         let file = self.get_file(file_type);
         try!(file.seek(SeekFrom::Start(offset)));

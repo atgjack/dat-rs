@@ -28,6 +28,8 @@ pub struct Hypercore<T: Storage> {
 
 impl<T: Storage> Hypercore<T> {
     pub fn new(mut storage: T) -> Result<Hypercore<T>> {
+        try!(storage.setup());
+
         let state = try!(storage.get_state());
         let mut generate_key = true;
         let mut key = [0u8; 32];
